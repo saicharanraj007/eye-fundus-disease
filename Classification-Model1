@@ -1,0 +1,155 @@
+# MANUAL NET ARCHITECTURE
+import tensorflow
+import tensorflow as tf
+print(tf.__version__)
+
+import os 
+import glob
+from PIL import Image
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Sequential
+
+from tensorflow.keras.layers import Convolution2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Activation
+cataract = 'Dataset/cataract'
+diabetic_retinopathy = 'Dataset/diabetic_retinopathy'
+glaucoma = 'Dataset/glaucoma'
+normal = 'Dataset/normal'
+def plot_images(item_dir, n=6):
+    all_item_dir = os.listdir(item_dir)
+    item_files = [os.path.join(item_dir, file) for file in all_item_dir][:n]
+    
+    plt.figure(figsize=(80, 40))
+    for idx, img_path in enumerate(item_files):
+        plt.subplot(3, n, idx+1)
+        img = plt.imread(img_path)
+        plt.imshow(img, cmap='gray')
+        plt.axis('off')
+    
+    plt.tight_layout()
+    
+def image_details_print(data,path):
+    print('======== Images in: ', path)
+    for key,values in data.items():
+        print(key,':\t', values)
+
+
+def images_details(path):
+    files=[f for f in glob.glob(path + "**/*.*", recursive=True)]
+    data={}
+    data['Images_count']=len(files)
+    data['Min_width']=10**100
+    data['Max_width']=0
+    data['Min_height']=10**100
+    data['Max_height']=0
+    
+    for f in files:
+        img=Image.open(f)
+        width,height=img.size
+        data['Min_width']=min(width,data['Min_width'])
+        data['Max_width']=max(width, data['Max_width'])
+        data['Min_height']=min(height, data['Min_height'])
+        data['Max_height']=max(height, data['Max_height'])
+        
+    image_details_print(data,path)
+print("")
+print("TRAINING DATA FOR CATERACT:")
+print("")
+images_details(cataract)
+print("")
+plot_images(cataract, 10) 
+print("")
+print("TRAINING DATA FOR DIABETIC RETINOPATHY:")
+print("")
+images_details(diabetic_retinopathy)
+print("")
+plot_images(diabetic_retinopathy, 10)
+print("")
+print("TRAINING DATA FOR GLAUCOMA:")
+print("")
+images_details(glaucoma)
+print("")
+plot_images(glaucoma, 10)
+print("")
+print("TRAINING DATA FOR SEBORRHEIC NORMAL:")
+print("")
+images_details(normal)
+print("")
+plot_images(normal, 10)
+# Define the path to your dataset directory
+dataset_dir = 'Dataset'
+
+# Set the batch size and number of classes
+batch_size = 64
+num_classes = 4
+# Create an ImageDataGenerator for data augmentation and preprocessing
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True,
+    validation_split=0.2)
+# Load and preprocess the dataset using the ImageDataGenerator
+
+train_generator = datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(224, 224),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training')
+validation_generator = datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(224, 224),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation')
+
+MODEL=Sequential()
+MODEL.add(Convolution2D(32,(3,3),input_shape=(224,224,3),activation='relu'))
+MODEL.add(MaxPooling2D(pool_size=(2,2)))
+MODEL.add(Flatten())
+MODEL.add(Dense(4, activation='softmax'))
+MODEL.compile(optimizer='rmsprop',loss='categorical_crossentropy',metrics=['accuracy'])
+epochs = 10
+history = MODEL.fit(
+    train_generator,
+    validation_data=validation_generator,
+    epochs=epochs # Add the callbacks here
+)
+import matplotlib.pyplot as plt
+
+def graph():
+    #Plot training & validation accuracy values
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+graph()
+import matplotlib.pyplot as plt
+
+def graph():
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+graph()
+
+
