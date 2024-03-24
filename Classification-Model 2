@@ -1,0 +1,103 @@
+# LENET ARCHITECTURE
+import tensorflow
+import tensorflow as tf
+print(tf.__version__)
+
+from tensorflow.keras.layers import Convolution2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Activation
+# Create an ImageDataGenerator for data augmentation and preprocessing
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True,
+    validation_split=0.2)
+# Define the path to your dataset directory
+dataset_dir = 'Dataset'
+
+# Set the batch size and number of classes
+batch_size = 64
+num_classes = 9
+# Load and preprocess the dataset using the ImageDataGenerator
+
+train_generator = datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(224, 224),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training')
+validation_generator = datagen.flow_from_directory(
+    dataset_dir,
+    target_size=(224, 224),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation')
+
+from tensorflow.keras.models import Sequential
+
+MODEL=Sequential()
+MODEL.add(Convolution2D(filters=32, kernel_size=(3,3), strides=(3,3), input_shape=(224,224,3), padding=('valid'), activation='relu'))
+MODEL.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
+MODEL.add(Convolution2D(filters=128, kernel_size=(3,3), strides=(3,3), padding=('valid'), activation='relu'))
+MODEL.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
+MODEL.add(Flatten())
+MODEL.add(Dense(256, activation='relu'))
+MODEL.add(Dense(4, activation='softmax'))
+
+OPT    = tensorflow.keras.optimizers.Adam(0.001)
+
+MODEL.compile(optimizer=OPT,loss='categorical_crossentropy',metrics=["accuracy", tensorflow.keras.metrics.Precision()])
+MODEL.summary()
+model_path = "LENET.h5"
+
+from keras.callbacks import ModelCheckpoint
+M = ModelCheckpoint(model_path, monitor='accuracy', verbose=1, save_best_only=True)
+epochs = 50
+history = MODEL.fit(
+    train_generator,
+    validation_data=validation_generator,
+    epochs=epochs,
+    callbacks=[M]  # Add the callbacks here
+)
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure(figsize=(20, 8))
+plt.plot(history.history['accuracy'])
+
+for i in range(34):
+    if i%5 == 0:
+        plt.annotate(np.round(history.history['accuracy'][i]*100,2),xy=(i,history.history['accuracy'][i]))
+
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.show()
+plt.figure(figsize=(20, 8))
+plt.plot(history.history['loss'])
+
+for i in range(34):
+    if i%5 == 0:
+        plt.annotate(np.round(history.history['loss'][i]*100,2),xy=(i,history.history['loss'][i]))
+
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.show()
+
+
+
+
+
+
+
